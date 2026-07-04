@@ -41,7 +41,11 @@ export default function CustomersPage() {
           ) : (
             <div className="divide-y divide-gray-50">
               {filtered.map((c) => (
-                <div key={c.id} className="flex items-center px-6 py-4 hover:bg-gray-50 cursor-pointer transition-colors">
+                <div
+                  key={c.id}
+                  onClick={() => router.push(`/customers/${c.id}`)}
+                  className="flex items-center px-6 py-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                >
                   <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0 mr-4">
                     <Building2 size={18} className="text-blue-500" />
                   </div>

@@ -63,7 +63,11 @@ export default function ProjectsPage() {
           ) : (
             <div className="divide-y divide-gray-50">
               {filtered.map((p) => (
-                <div key={p.id} className="flex items-center px-6 py-4 hover:bg-gray-50 cursor-pointer transition-colors">
+                <div
+                  key={p.id}
+                  onClick={() => router.push(`/projects/${p.id}`)}
+                  className="flex items-center px-6 py-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full flex-shrink-0 ${statusColor[p.status]}`}>{p.status}</span>
