@@ -38,7 +38,7 @@ export default function NewEstimatePage() {
   const removeItem = (i: number) => setItems(items.filter((_, idx) => idx !== i));
   const updateItem = (i: number, field: keyof EstimateLineItem, value: string | number) => {
     const next = [...items];
-    (next[i] as Record<string, string | number>)[field] = value;
+    (next[i] as unknown as Record<string, string | number>)[field] = value;
     setItems(next);
   };
 
