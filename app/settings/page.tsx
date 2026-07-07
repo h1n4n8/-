@@ -1,54 +1,50 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import AppShell from "@/components/AppShell";
-import {
-  User,
-  Building2,
-  Bell,
-  Shield,
-  ChevronRight,
-  LogOut,
-} from "lucide-react";
-
-const settingGroups = [
-  {
-    title: "アカウント",
-    items: [
-      { icon: User, label: "プロフィール設定", desc: "名前・パスワードの変更" },
-      { icon: Building2, label: "会社情報", desc: "会社名・会社コードの確認" },
-    ],
-  },
-  {
-    title: "通知",
-    items: [
-      { icon: Bell, label: "通知設定", desc: "プッシュ通知・メール通知の管理" },
-    ],
-  },
-  {
-    title: "セキュリティ",
-    items: [
-      { icon: Shield, label: "セキュリティ設定", desc: "ログイン履歴・デバイス管理" },
-    ],
-  },
-];
+import { Building2, LogOut, Save, Check } from "lucide-react";
+import { CompanyInfo, getCompanyInfo, saveCompanyInfo } from "@/lib/companyStorage";
 
 export default function SettingsPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const [info, setInfo] = useState<CompanyInfo>({ name: "", postalCode: "", address: "", tel: "", fax: "", email: "", personInCharge: "" });
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    if (!user) router.replace("/login");
+    if (!user) { router.replace("/login"); return; }
+    setInfo(getCompanyInfo());
   }, [user, router]);
 
   if (!user) return null;
+
+  const handleChange = (field: keyof CompanyInfo, value: string) => {
+    setInfo((prev) => ({ ...prev, [field]: value }));
+    setSaved(false);
+  };
+
+  const handleSave = () => {
+    saveCompanyInfo(info);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
 
   const handleLogout = () => {
     logout();
     router.push("/login");
   };
+
+  const fields: { key: keyof CompanyInfo; label: string; placeholder: string; type?: string }[] = [
+    { key: "name", label: "会社名", placeholder: "株式会社〇〇設備" },
+    { key: "postalCode", label: "郵便番号", placeholder: "000-0000" },
+    { key: "address", label: "住所", placeholder: "東京都〇〇区〇〇1-2-3" },
+    { key: "tel", label: "電話番号", placeholder: "03-0000-0000" },
+    { key: "fax", label: "FAX番号", placeholder: "03-0000-0001" },
+    { key: "email", label: "メールアドレス", placeholder: "info@example.co.jp", type: "email" },
+    { key: "personInCharge", label: "担当者名", placeholder: "山田 太郎" },
+  ];
 
   return (
     <AppShell>
@@ -59,9 +55,7 @@ export default function SettingsPage() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-xl font-bold">
-                {user.name.charAt(0)}
-              </span>
+              <span className="text-white text-xl font-bold">{user.name.charAt(0)}</span>
             </div>
             <div>
               <p className="font-semibold text-gray-800 text-lg">{user.name}</p>
@@ -76,33 +70,37 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Settings Groups */}
-        {settingGroups.map((group) => (
-          <div key={group.title} className="mb-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-1 mb-2">
-              {group.title}
-            </p>
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              {group.items.map((item, i) => (
-                <button
-                  key={item.label}
-                  className={`w-full flex items-center px-5 py-4 hover:bg-gray-50 transition-colors text-left ${
-                    i > 0 ? "border-t border-gray-50" : ""
-                  }`}
-                >
-                  <div className="w-9 h-9 bg-gray-100 rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
-                    <item.icon size={18} className="text-gray-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-800">{item.label}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{item.desc}</p>
-                  </div>
-                  <ChevronRight size={16} className="text-gray-300" />
-                </button>
-              ))}
-            </div>
+        {/* Company Info Form */}
+        <div className="mb-4">
+          <div className="flex items-center gap-2 px-1 mb-2">
+            <Building2 size={14} className="text-gray-400" />
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">会社情報</p>
           </div>
-        ))}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
+            {fields.map((f) => (
+              <div key={f.key}>
+                <label className="block text-xs font-medium text-gray-500 mb-1">{f.label}</label>
+                <input
+                  type={f.type ?? "text"}
+                  value={info[f.key]}
+                  onChange={(e) => handleChange(f.key, e.target.value)}
+                  placeholder={f.placeholder}
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none text-sm"
+                />
+              </div>
+            ))}
+            <button
+              onClick={handleSave}
+              className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-medium transition-colors ${
+                saved
+                  ? "bg-green-500 text-white"
+                  : "bg-blue-600 hover:bg-blue-700 text-white"
+              }`}
+            >
+              {saved ? <><Check size={16} />保存しました</> : <><Save size={16} />会社情報を保存</>}
+            </button>
+          </div>
+        </div>
 
         {/* Logout */}
         <button
@@ -113,9 +111,7 @@ export default function SettingsPage() {
           ログアウト
         </button>
 
-        <p className="text-center text-xs text-gray-300 mt-8">
-          Version 1.0.0
-        </p>
+        <p className="text-center text-xs text-gray-300 mt-8">Version 1.0.0</p>
       </div>
     </AppShell>
   );
