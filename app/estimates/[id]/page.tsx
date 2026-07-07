@@ -5,27 +5,38 @@ import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import AppShell from "@/components/AppShell";
 import { ChevronLeft, Mail, Printer } from "lucide-react";
-import { StoredEstimate, getEstimate } from "@/lib/estimateStorage";
+import { StoredEstimate, getEstimate, saveEstimate } from "@/lib/estimateStorage";
+import { CompanyInfo, getCompanyInfo } from "@/lib/companyStorage";
 
-const statusColor: Record<string, string> = {
-  "確定": "bg-green-100 text-green-700",
-  "未確定": "bg-amber-100 text-amber-700",
-  "作成中": "bg-gray-100 text-gray-600",
+const statusStyles: Record<string, string> = {
+  確定: "bg-green-600 text-white",
+  未確定: "bg-amber-500 text-white",
+  作成中: "bg-gray-400 text-white",
 };
+
+const statusOptions: StoredEstimate["status"][] = ["作成中", "未確定", "確定"];
 
 export default function EstimateDetailPage() {
   const { user } = useAuth();
   const router = useRouter();
   const params = useParams();
   const [estimate, setEstimate] = useState<StoredEstimate | null>(null);
+  const [company, setCompany] = useState<CompanyInfo | null>(null);
 
   useEffect(() => {
     if (!user) { router.replace("/login"); return; }
     const e = getEstimate(params.id as string);
     if (e) setEstimate(e);
+    setCompany(getCompanyInfo());
   }, [user, router, params.id]);
 
   if (!user || !estimate) return null;
+
+  const handleStatusChange = (status: StoredEstimate["status"]) => {
+    const updated = { ...estimate, status };
+    saveEstimate(updated);
+    setEstimate(updated);
+  };
 
   const discount = estimate.discount ?? 0;
   const rawSubtotal = estimate.items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
@@ -56,6 +67,23 @@ export default function EstimateDetailPage() {
             </div>
           </div>
 
+          <div className="no-print flex items-center gap-3 mb-6 bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
+            <span className="text-sm font-medium text-gray-600 mr-1">ステータス:</span>
+            {statusOptions.map((s) => (
+              <button
+                key={s}
+                onClick={() => handleStatusChange(s)}
+                className={`px-4 py-1.5 rounded-xl text-sm font-medium transition-colors border ${
+                  estimate.status === s
+                    ? statusStyles[s] + " border-transparent"
+                    : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
             <div className="text-center mb-8">
               <h1 className="text-2xl font-bold text-gray-800 tracking-widest">見　積　書</h1>
@@ -78,7 +106,11 @@ export default function EstimateDetailPage() {
                   <p>お支払方法: <span className="font-medium">{estimate.paymentMethod}</span></p>
                 )}
                 <div className="mt-1">
-                  <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${statusColor[estimate.status]}`}>
+                  <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${
+                    estimate.status === "確定" ? "bg-green-100 text-green-700" :
+                    estimate.status === "未確定" ? "bg-amber-100 text-amber-700" :
+                    "bg-gray-100 text-gray-600"
+                  }`}>
                     {estimate.status}
                   </span>
                 </div>
@@ -138,6 +170,16 @@ export default function EstimateDetailPage() {
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-sm font-medium text-gray-600 mb-1">備考</p>
                 <p className="text-sm text-gray-700 whitespace-pre-wrap">{estimate.notes}</p>
+              </div>
+            )}
+
+            {company && (company.name || company.tel) && (
+              <div className="mt-6 pt-4 border-t border-gray-100 text-right text-xs text-gray-500 space-y-0.5">
+                {company.name && <p className="font-medium text-gray-700 text-sm">{company.name}</p>}
+                {company.address && <p>{company.address}</p>}
+                {company.tel && <p>TEL: {company.tel}{company.fax ? `　FAX: ${company.fax}` : ""}</p>}
+                {company.email && <p>{company.email}</p>}
+                {company.personInCharge && <p>担当: {company.personInCharge}</p>}
               </div>
             )}
           </div>

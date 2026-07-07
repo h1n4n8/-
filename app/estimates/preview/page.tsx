@@ -6,11 +6,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import AppShell from "@/components/AppShell";
 import { ChevronLeft, Printer, Mail, Save } from "lucide-react";
 import { StoredEstimate, saveEstimate } from "@/lib/estimateStorage";
+import { CompanyInfo, getCompanyInfo } from "@/lib/companyStorage";
 
 export default function EstimatePreviewPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [estimate, setEstimate] = useState<StoredEstimate | null>(null);
+  const [company, setCompany] = useState<CompanyInfo | null>(null);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -18,6 +20,7 @@ export default function EstimatePreviewPage() {
     const draft = localStorage.getItem("estimate_draft");
     if (draft) setEstimate(JSON.parse(draft));
     else router.replace("/estimates/new");
+    setCompany(getCompanyInfo());
   }, [user, router]);
 
   if (!estimate) return null;
@@ -141,12 +144,22 @@ export default function EstimatePreviewPage() {
                 <p className="text-sm text-gray-700 whitespace-pre-wrap">{estimate.notes}</p>
               </div>
             )}
+
+            {company && (company.name || company.tel) && (
+              <div className="mt-6 pt-4 border-t border-gray-100 text-right text-xs text-gray-500 space-y-0.5">
+                {company.name && <p className="font-medium text-gray-700 text-sm">{company.name}</p>}
+                {company.address && <p>{company.address}</p>}
+                {company.tel && <p>TEL: {company.tel}{company.fax ? `　FAX: ${company.fax}` : ""}</p>}
+                {company.email && <p>{company.email}</p>}
+                {company.personInCharge && <p>担当: {company.personInCharge}</p>}
+              </div>
+            )}
           </div>
 
           <div className="no-print mt-4 bg-blue-50 border border-blue-100 rounded-xl px-5 py-4 text-sm text-blue-700">
             <p className="font-medium mb-0.5">メール送信について</p>
             <p className="text-xs text-blue-600">
-              「メール送信」ボタンを押すと、{estimate.customerName}（{estimate.customerEmail}）客のメールが自動作成されます。印刷/PDFで見積書をPDF保存してから添付してください。
+              「メール送信」ボタンを押すと、{estimate.customerName}（{estimate.customerEmail}）宛のメールが自動作成されます。印刷/PDFで見積書をPDF保存してから添付してください。
             </p>
           </div>
         </div>
