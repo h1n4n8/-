@@ -5,14 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import AppShell from "@/components/AppShell";
 import { Search, ChevronRight, FileText, Plus } from "lucide-react";
-
-const estimates = [
-  { id: "1", no: "EST-2024-001", name: "〇〇マンション空調工事", customer: "佐藤建設", amount: "¥1,200,000", status: "確定", date: "2024-06-01" },
-  { id: "2", no: "EST-2024-002", name: "△△ビル電気設備改修", customer: "田中商事", amount: "¥850,000", status: "未確定", date: "2024-06-10" },
-  { id: "3", no: "EST-2024-003", name: "□□工場配管工事", customer: "鈴木工業", amount: "¥2,100,000", status: "確定", date: "2024-06-03" },
-  { id: "4", no: "EST-2024-004", name: "◇◇病院給排水改修", customer: "医療法人△△", amount: "¥3,400,000", status: "未確定", date: "2024-06-12" },
-  { id: "5", no: "EST-2024-005", name: "○○学校空調設備", customer: "△△市教育委員会", amount: "¥5,600,000", status: "作成中", date: "2024-06-18" },
-];
+import { StoredEstimate, getEstimates } from "@/lib/estimateStorage";
 
 const statusColor: Record<string, string> = {
   確定: "bg-green-100 text-green-700",
@@ -27,20 +20,22 @@ export default function EstimatesPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("すべて");
   const [search, setSearch] = useState("");
+  const [estimates, setEstimates] = useState<StoredEstimate[]>([]);
 
   useEffect(() => {
-    if (!user) router.replace("/login");
+    if (!user) { router.replace("/login"); return; }
+    setEstimates(getEstimates());
   }, [user, router]);
 
   if (!user) return null;
 
   const filtered = estimates.filter((e) => {
     const matchTab = activeTab === "すべて" || e.status === activeTab;
-    const matchSearch = !search || e.name.includes(search) || e.customer.includes(search);
+    const matchSearch = !search || e.name.includes(search) || e.customerName.includes(search);
     return matchTab && matchSearch;
   });
 
-  const total = filtered.reduce((sum, e) => sum + parseInt(e.amount.replace(/[¥,]/g, "")), 0);
+  const total = filtered.reduce((sum, e) => sum + e.total, 0);
 
   return (
     <AppShell>
@@ -52,14 +47,9 @@ export default function EstimatesPage() {
               <p className="text-xs text-blue-500">合計金額</p>
               <p className="text-lg font-bold text-blue-700">¥{total.toLocaleString()}</p>
             </div>
-            <a
-              href="https://h1n4n8.github.io/mitumori/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors"
-            >
+            <button onClick={() => router.push("/estimates/new")} className="flex items-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors">
               <Plus size={16} />新規作成
-            </a>
+            </button>
           </div>
         </div>
         <div className="relative mb-4">
@@ -77,11 +67,7 @@ export default function EstimatesPage() {
           ) : (
             <div className="divide-y divide-gray-50">
               {filtered.map((e) => (
-                <div
-                  key={e.id}
-                  onClick={() => router.push(`/estimates/${e.id}`)}
-                  className="flex items-center px-6 py-4 hover:bg-gray-50 cursor-pointer transition-colors"
-                >
+                <div key={e.id} onClick={() => router.push(`/estimates/${e.id}`)} className="flex items-center px-6 py-4 hover:bg-gray-50 cursor-pointer transition-colors">
                   <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center flex-shrink-0 mr-4">
                     <FileText size={18} className="text-purple-500" />
                   </div>
@@ -91,11 +77,11 @@ export default function EstimatesPage() {
                       <p className="font-medium text-gray-800 text-sm truncate">{e.name}</p>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-gray-400">
-                      <span>{e.no}</span><span>{e.customer}</span><span>{e.date}</span>
+                      <span>{e.no}</span><span>{e.customerName}</span><span>{e.date}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 ml-4">
-                    <span className="text-sm font-semibold text-gray-700">{e.amount}</span>
+                    <span className="text-sm font-semibold text-gray-700">¥{e.total.toLocaleString()}</span>
                     <ChevronRight size={16} className="text-gray-300" />
                   </div>
                 </div>

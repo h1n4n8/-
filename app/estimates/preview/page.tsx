@@ -1,34 +1,42 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import AppShell from "@/components/AppShell";
-import { ChevronLeft, Mail, Printer } from "lucide-react";
-import { StoredEstimate, getEstimate } from "@/lib/estimateStorage";
+import { ChevronLeft, Printer, Mail, Save } from "lucide-react";
+import { StoredEstimate, saveEstimate } from "@/lib/estimateStorage";
 
-const statusColor: Record<string, string> = {
-  確定: "bg-green-100 text-green-700",
-  未確定: "bg-amber-100 text-amber-700",
-  作成中: "bg-gray-100 text-gray-600",
-};
-
-export default function EstimateDetailPage() {
+export default function EstimatePreviewPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const params = useParams();
   const [estimate, setEstimate] = useState<StoredEstimate | null>(null);
+  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     if (!user) { router.replace("/login"); return; }
-    const e = getEstimate(params.id as string);
-    if (e) setEstimate(e);
-  }, [user, router, params.id]);
+    const draft = localStorage.getItem("estimate_draft");
+    if (draft) {
+      setEstimate(JSON.parse(draft));
+    } else {
+      router.replace("/estimates/new");
+    }
+  }, [user, router]);
 
-  if (!user || !estimate) return null;
+  if (!estimate) return null;
 
-  const emailBody = encodeURIComponent(`${estimate.customerName} 御中\n\nいつもお世話になっております。\n見積書をお送りいたします。\n\n【見積番号】${estimate.no}\n【件名】${estimate.name}\n【見積金額】¥${estimate.total.toLocaleString()}（税込）\n\nよろしくお願いいたします。`);
-  const mailtoLink = `mailto:${estimate.customerEmail}?subject=${encodeURIComponent(`見積書送付《${estimate.no}》${estimate.name}`)}&body=${emailBody}`;
+  const handleSave = () => {
+    const toSave: StoredEstimate = { ...estimate, status: "未確定" };
+    saveEstimate(toSave);
+    localStorage.removeItem("estimate_draft");
+    setSaved(true);
+    setTimeout(() => router.push("/estimates"), 800);
+  };
+
+  const emailBody = encodeURIComponent(
+    `${estimate.customerName} 御中\n\nいつもお世話になっております。\n見積書をお送りいたします。\n\n【見積番号】${estimate.no}\n【件名】${estimate.name}\n【見積金額】¥${estimate.total.toLocaleString()}（税込）\n【見積日】${estimate.date}\n\nご確認のほど、よろしくお願いいたします。`
+  );
+  const mailtoLink = `mailto:${estimate.customerEmail}?subject=${encodeURIComponent(`見積書送付のご連絡《${estimate.no}》${estimate.name}`)}&body=${emailBody}`;
 
   return (
     <>
@@ -43,13 +51,19 @@ export default function EstimateDetailPage() {
               <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-50 transition-colors">
                 <Printer size={16} />印刺・PDF
               </button>
-              <a href={mailtoLink} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors">
+              <a href={mailtoLink} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-50 transition-colors">
                 <Mail size={16} />メール送信
               </a>
+              <button onClick={handleSave} disabled={saved} className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-green-500 text-white text-sm font-medium rounded-xl transition-colors">
+                <Save size={16} />{saved ? "保存済み" : "保存"}
+              </button>
             </div>
           </div>
+
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
-            <div className="text-center mb-8"><h1 className="text-2xl font-bold text-gray-800 tracking-widest">見　積　書</h1></div>
+            <div className="text-center mb-8">
+              <h1 className="text-2xl font-bold text-gray-800 tracking-widest">見　積　書</h1>
+            </div>
             <div className="flex justify-between mb-8">
               <div>
                 <p className="text-lg font-semibold text-gray-800 border-b-2 border-gray-800 pb-1 mb-1">{estimate.customerName} 御中</p>
@@ -58,7 +72,6 @@ export default function EstimateDetailPage() {
               <div className="text-right text-sm text-gray-600 space-y-1">
                 <p>見積番号: <span className="font-medium">{estimate.no}</span></p>
                 <p>見積日: <span className="font-medium">{estimate.date}</span></p>
-                <div className="mt-1"><span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${statusColor[estimate.status]}`}>{estimate.status}</span></div>
               </div>
             </div>
             <div className="mb-6">
@@ -98,6 +111,11 @@ export default function EstimateDetailPage() {
                 <p className="text-sm text-gray-700 whitespace-pre-wrap">{estimate.notes}</p>
               </div>
             )}
+          </div>
+
+          <div className="no-print mt-4 bg-blue-50 border border-blue-100 rounded-xl px-5 py-4 text-sm text-blue-700">
+            <p className="font-medium mb-0.5">メール送信について</p>
+            <p className="text-xs text-blue-600">「メール送信」ボタンを押すと、{estimate.customerName}（{estimate.customerEmail}）宛のメールが自動作成されます。印刺/PDFで見積書をPDF保存してから添付してください。</p>
           </div>
         </div>
       </AppShell>
