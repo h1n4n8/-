@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import AppShell from "@/components/AppShell";
-import { ChevronLeft, Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronLeft, Plus, Trash2, ChevronDown, ChevronUp, Sparkles, Loader2 } from "lucide-react";
 import { StoredEstimate, EstimateLineItem, generateEstimateNo } from "@/lib/estimateStorage";
+import { getQuoteItems, StoredQuoteItem } from "@/lib/quoteItemsStorage";
 
 const CUSTOMERS = [
   { id: "1", name: "佐藤建設", email: "sato@sato-kensetsu.co.jp" },
@@ -117,6 +118,19 @@ export default function NewEstimatePage() {
   const [categories, setCategories] = useState<CategoryGroup[]>([]);
   const [error, setError] = useState("");
 
+  const [companyItems, setCompanyItems] = useState<StoredQuoteItem[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const [aiSuggestions, setAiSuggestions] = useState<
+    { category: string; name: string; unit: string; unitPrice: number; reason: string }[] | null
+  >(null);
+  const [aiSelected, setAiSelected] = useState<Set<number>>(new Set());
+  const [aiNote, setAiNote] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCompanyItems(getQuoteItems());
+  }, []);
+
   if (!user) { router.replace("/login"); return null; }
 
   const customer = CUSTOMERS.find((c) => c.id === customerId);
@@ -171,6 +185,76 @@ export default function NewEstimatePage() {
         return { ...c, items: c.items.map((i) => (i.id === itemId ? { ...i, [field]: value } : i)) };
       })
     );
+
+  const getPresetsForCategory = (cat: CategoryName) => {
+    const base = PRESETS[cat];
+    const fromCompany = companyItems
+      .filter((i) => i.category === cat)
+      .map((i) => ({ name: i.name, unit: i.unit, price: i.unitPrice }));
+    const merged = [...base];
+    for (const item of fromCompany) {
+      if (!merged.some((m) => m.name === item.name)) merged.push(item);
+    }
+    return merged;
+  };
+
+  const runAiSuggest = async () => {
+    setAiLoading(true);
+    setAiError("");
+    setAiSuggestions(null);
+    setAiNote(null);
+    try {
+      const res = await fetch("/api/estimates/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectName,
+          customerName: customer?.name,
+          selectedItems: categories.flatMap((c) =>
+            c.items.map((i) => ({ category: c.category, name: i.description, unit: i.unit, quantity: i.quantity, unitPrice: i.unitPrice }))
+          ),
+          pastQuoteItems: companyItems,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAiError(data.error ?? "AI提案の取得に失敗しました");
+        return;
+      }
+      setAiSuggestions(data.suggestedItems ?? []);
+      setAiSelected(new Set((data.suggestedItems ?? []).map((_: unknown, i: number) => i)));
+      setAiNote(data.note ?? null);
+    } catch {
+      setAiError("通信エラーが発生しました。ネットワークをご確認ください。");
+    }
+    setAiLoading(false);
+  };
+
+  const applyAiSuggestions = () => {
+    if (!aiSuggestions) return;
+    const chosen = aiSuggestions.filter((_, i) => aiSelected.has(i));
+    setCategories((prev) => {
+      const next = [...prev];
+      for (const s of chosen) {
+        const existingCat = next.find((c) => c.category === (s.category as CategoryName));
+        const item = newItem(s.name, s.unit, s.unitPrice);
+        if (existingCat) {
+          existingCat.items = [...existingCat.items, item];
+        } else {
+          next.push({
+            id: `c${Date.now()}_${s.name}`,
+            category: (CATEGORY_NAMES.includes(s.category as CategoryName)
+              ? (s.category as CategoryName)
+              : "その他（自由入力）"),
+            items: [item],
+            collapsed: false,
+          });
+        }
+      }
+      return next;
+    });
+    setAiSuggestions(null);
+  };
 
   const allItems = categories.flatMap((c) => c.items);
   const subtotal = allItems.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
@@ -274,6 +358,72 @@ export default function NewEstimatePage() {
               </div>
             </div>
 
+            {/* AI suggestion */}
+            <div className="mb-4">
+              <button
+                onClick={runAiSuggest}
+                disabled={aiLoading || !projectName}
+                className="flex items-center gap-2 text-xs font-medium px-3 py-2 rounded-xl bg-purple-50 text-purple-700 border border-purple-100 hover:bg-purple-100 disabled:opacity-50 transition-colors"
+              >
+                {aiLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                似た過去案件からAIが品目案を提案
+              </button>
+              {!projectName && (
+                <p className="text-[11px] text-gray-400 mt-1">工事名を入力すると使えます</p>
+              )}
+              {aiError && <p className="text-xs text-red-500 mt-1">{aiError}</p>}
+
+              {aiSuggestions && aiSuggestions.length > 0 && (
+                <div className="mt-3 border border-purple-100 rounded-xl overflow-hidden">
+                  <div className="bg-purple-50 px-3 py-2 text-xs font-medium text-purple-700 flex items-center gap-1.5">
+                    <Sparkles size={12} />AIの提案(内容・金額は必ずご確認ください)
+                  </div>
+                  <div className="divide-y divide-gray-50 max-h-56 overflow-y-auto">
+                    {aiSuggestions.map((s, i) => (
+                      <label key={i} className="flex items-center gap-3 px-3 py-2 text-xs cursor-pointer hover:bg-gray-50">
+                        <input
+                          type="checkbox"
+                          checked={aiSelected.has(i)}
+                          onChange={() =>
+                            setAiSelected((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(i)) next.delete(i);
+                              else next.add(i);
+                              return next;
+                            })
+                          }
+                          className="rounded border-gray-300"
+                        />
+                        <span className="text-gray-400 w-20 flex-shrink-0 truncate">{s.category}</span>
+                        <span className="flex-1 text-gray-800">{s.name}</span>
+                        <span className="text-gray-400">¥{s.unitPrice.toLocaleString()}/{s.unit}</span>
+                        <span className="text-purple-400 hidden sm:inline">{s.reason}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="p-2">
+                    <button
+                      onClick={applyAiSuggestions}
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium py-2 rounded-lg transition-colors"
+                    >
+                      選択した{aiSelected.size}件を工事項目に追加(追加後も編集できます)
+                    </button>
+                  </div>
+                </div>
+              )}
+              {aiNote && (
+                <div className="mt-2 flex items-start gap-2 bg-purple-50/60 border border-purple-100 rounded-xl px-3 py-2">
+                  <p className="flex-1 text-xs text-purple-700">備考案: {aiNote}</p>
+                  <button
+                    onClick={() => { setNotes((n) => (n ? `${n}\n${aiNote}` : aiNote)); setAiNote(null); }}
+                    className="text-[11px] text-purple-600 font-medium hover:underline flex-shrink-0"
+                  >
+                    採用
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Category list */}
             <div className="space-y-3 mb-4">
               {categories.map((cat) => (
@@ -294,9 +444,9 @@ export default function NewEstimatePage() {
                   {!cat.collapsed && (
                     <div className="p-3 space-y-3">
                       {/* Preset chips */}
-                      {PRESETS[cat.category].length > 0 && (
+                      {getPresetsForCategory(cat.category).length > 0 && (
                         <div className="flex flex-wrap gap-1.5">
-                          {PRESETS[cat.category].map((preset) => {
+                          {getPresetsForCategory(cat.category).map((preset) => {
                             const active = cat.items.some((i) => i.description === preset.name);
                             return (
                               <button
