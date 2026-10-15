@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+<!-- プレースホルダー画像。本番では実際の現場・スタッフ写真に差し替えてください。 -->
+<defs><pattern id="p" width="28" height="28" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="28" height="28" fill="#e9eff5"/><rect width="2" height="28" fill="#dde6ee"/></pattern></defs>
+<rect width="1600" height="1000" fill="url(#p)"/>
+<rect x="12" y="12" width="1576" height="976" fill="none" stroke="#b9c8d6" stroke-width="2" stroke-dasharray="10 8"/>
+<g transform="translate(728.5 253.8)" fill="none" stroke="#7f95ab" stroke-width="10.214285714285714"><path d="M17.16 42.9h25.74l14.3-20.020000000000003h40.040000000000006l14.3 20.020000000000003h25.74v85.8h-120.11999999999999z"/><circle cx="71.5" cy="85.8" r="24.310000000000002"/></g>
+<text x="800" y="454.3999999999999" text-anchor="middle" font-family="sans-serif" font-size="36" font-weight="700" fill="#b4410a">写真【仮】</text>
+<text x="800" y="531.1999999999999" text-anchor="middle" font-family="'Noto Sans JP',sans-serif" font-size="48" fill="#3d5266">作業着の自社スタッフが飲食店の天井カセット形エアコン</text>
+<text x="800" y="603.1999999999999" text-anchor="middle" font-family="'Noto Sans JP',sans-serif" font-size="48" fill="#3d5266">を取り付けている様子（横長・右側に人物）</text>
+</svg>
