@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+<!-- プレースホルダー画像。本番では実際の現場・スタッフ写真に差し替えてください。 -->
+<defs><pattern id="p" width="28" height="28" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="28" height="28" fill="#e9eff5"/><rect width="2" height="28" fill="#dde6ee"/></pattern></defs>
+<rect width="1200" height="800" fill="url(#p)"/>
+<rect x="12" y="12" width="1176" height="776" fill="none" stroke="#b9c8d6" stroke-width="2" stroke-dasharray="10 8"/>
+<g transform="translate(543 204.3)" fill="none" stroke="#7f95ab" stroke-width="8.142857142857142"><path d="M13.68 34.199999999999996h20.52l11.4-15.96h31.92l11.4 15.96h20.52v68.39999999999999h-95.75999999999999z"/><circle cx="57" cy="68.39999999999999" r="19.380000000000003"/></g>
+<text x="600" y="363.9" text-anchor="middle" font-family="sans-serif" font-size="28.5" font-weight="700" fill="#b4410a">写真【仮】</text>
+<text x="600" y="424.7" text-anchor="middle" font-family="'Noto Sans JP',sans-serif" font-size="38" fill="#3d5266">施工前：焼肉店の客席天井に付いた、油汚れで黄ばんだ古</text>
+<text x="600" y="481.7" text-anchor="middle" font-family="'Noto Sans JP',sans-serif" font-size="38" fill="#3d5266">い天井カセット形室内機</text>
+</svg>

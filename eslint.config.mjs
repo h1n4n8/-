@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // 静的な仮サイト（Next.js アプリとは別物）
+    "sanes-site/**",
   ]),
 ]);
 
